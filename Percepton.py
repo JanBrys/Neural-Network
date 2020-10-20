@@ -1,95 +1,129 @@
-"""
-    4 wzorce uczace:
-    x1 =0,0 d1=0
-    x2 =0,1 d2=0
-    x3 =1,0 d3=0
-    x4 = 1,0 d4=1
-
-"""
-
 import numpy as np
 
 
-class Percepton(object):
+class Percepton:
     """
-        x_vector - wektor sygnałów wejściowych, które posłużą uczeniu
-        d_vector - wektor sygnałów wyjściowych, które posłużą uczeniu
-        w_range - zakres losowania wag. np. w_range = 1 to losowane wagi są z przedziału [-1,1]
-        threshold - próg. Występuje, gdy bias = False
-        bias - dodatkowy sygnał, pomagający w szukaniu wag
-        unipolar = True - funkcja progowa będzie unipolarna, bipolarna w przeciwnym wypadku
-        alpha - współczynnik uczenia - określa jak szybko będzie zmieniała się waga
+    logic = "AND" "OR"
+    activation_function: True = unipolar / False = bipolar
+    Threshold = 0 -> we use bias instead
     """
 
-    def train(self, x_vector, d_vector, w_range, threshold, unipolar, alpha, bias):
-
-        if bias:
-            for x in x_vector:
-                x.insert(0, 1)
-            w_vector = self.make_weights(x_vector[0], w_range)
-
+    def __init__(self, weight_range=1, alpha=0.01, threshold=0, activation_function=True):
+        self.__weight_range = weight_range
+        self.__alpha = alpha
+        self.__threshold = threshold
+        if self.__threshold == 0:
+            self.__bias = True
         else:
-            w_vector = self.make_weights(x_vector[0], w_range)
+            self.__bias = False
+        self.__activation_function = activation_function
 
-        # dla kazdego wzorca
-        without_faults = False
+        self.__x_pattern = None
+        self.__y_pattern = None
+        self.__w_pattern = None
+
+    def train(self):
+        """
+        epoch - liczba zawierajaca epoki\n
+        trained - jeśli jest ustawiony na true, wtedy oznacza to, ze znaleziono wagi, przy ktorych blad = 0\n
+        x - pojedynczy wzorzec\n
+        d - pozadany sygnal wyjsciowy dla wzorca x\n
+        y - otrzymany sygnal wyjsciowy przy pomocy funkcji aktywacji\n
+        error - otrzymany blad dla wzorca\n
+        w - pojedyncza waga\n
+        single_x - pojedynczy sygnal wzorca\n
+        error_in_epoch - tablica przechowujaca bledy z kazdej epoki\n
+        updated_w - tablica przechowujaca uaktualnione wagi
+        """
+        self.__prepareTrainingData()
         epoch = 0
-        while not without_faults:
-
-            without_faults = True
+        trained = False
+        while not trained:
+            trained = True
             epoch += 1
-            faults = []
-            for x, d in zip(x_vector, d_vector):
-                w_vector_updated = []
-                y = self.activate(w_vector, x, unipolar, threshold, bias)
-                fault = d - y
-                for w, x_sample in zip(w_vector, x):
-                    w_vector_updated.append(w + (alpha * (fault * x_sample)))
-                w_vector = w_vector_updated
-                faults.append(fault)
-            for f in faults:
-                if f != 0:
-                   without_faults = False
-        if not bias:
-            print("prog:" + str(threshold))
-        self.w_vector = w_vector
-        self.threshhold = threshold
-        self.bias = bias
-        self.unipolar = unipolar
-        print("Wspolczynnik uczenia: " + str(alpha))
+            errors_in_epoch = []
+            for x, d in zip(self.__x_pattern, self.__y_pattern):
+                updated_w = []
+                y = self.__activate(x)
+                error = d - y
+                for w, single_x in zip(self.__w_pattern, x):
+                    updated_w.append(w+(self.__alpha*(error*single_x)))
+                self.__w_pattern = updated_w
+                errors_in_epoch.append(error)
+            for e in errors_in_epoch:
+                if e != 0:
+                    trained = False
+        self.__w_pattern = np.round(self.__w_pattern, 3)
+        self.__showPerceptonDetails(epoch)
 
-        print("Czy z biasem?:" + str(bias))
-        print("Czy unipolarna?: " + str(unipolar))
-        print("Zakres wag: [" + str(-w_range) + ", " + str(w_range) + "]")
-        print("liczba epok:" + str(epoch))
-        print("Ostateczne wagi: " + str(w_vector))
-        # self.update_weights(self.w_vector, faults_vector, alpha)
+    def __prepareTrainingData(self):
+        """
+        Przygotowuje wszystkie dane dla uczenia
+        """
+        self.__prepareDefaultTrainPattern()
+        if self.__bias:
+            self.__addBiasToPatterns()
+        self.__generateTrainingWeights()
 
-    def make_weights(self, x, w_range):
-        w_vector = np.random.randint(-(w_range * 100), w_range * 100, len(x))
-        w_vector = w_vector / (np.random.randint(100, 10000))
-        return np.round(w_vector, 5)
 
-    def activate(self, w_vector, x, unipolar, threshold, bias):
-        z = 0
-        # z
-        for i in range(len(x)):
-            z += w_vector[i] * x[i]
-        # unipolar
-        if bias:
-            threshold = 0
-        if unipolar:
-            if z > threshold:
-                return 1
-            else:
-                return 0
-        # bipolar
+    def __prepareDefaultTrainPattern(self):
+        """
+        Przygotowuje wzorce uczące w zależnosci, czy będziemy stosować funkcje aktywacji bipolarna czy unipolarna
+        """
+        if self.__activation_function:
+            self.__x_pattern = [[0, 0], [0, 1], [1, 0], [1, 1]]
+            self.__y_pattern = [0, 0, 0, 1]
         else:
-            if z > threshold:
-                return 1
-            else:
-                return -1
+            self.__x_pattern = [[-1, -1], [-1, 1], [1, -1], [1, 1]]
+            self.__y_pattern = [-1, -1, -1, 1]
 
-    def predict(self, x_sample):
-        y = self.activate(self.w_vector, x_sample, self.unipolar, self.threshhold, self.bias)
-        print("Predicted y = " + str(y))
+    def __addBiasToPatterns(self):
+        """
+        Dodaje bias
+        """
+        for x in self.__x_pattern:
+            x.insert(0, 1)
+
+    def __generateTrainingWeights(self):
+        """
+        Przygotowuje wagi w zależności od wejść\n
+        input_pattern_len = długość jednego wzorca sygnałów wejściowych, aby można było skonstruować wektory wag
+        """
+        input_pattern_len = len(self.__x_pattern[0])
+        self.__w_pattern = np.random.randint(-(self.__weight_range * 100), self.__weight_range * 100, input_pattern_len)
+        self.__w_pattern = self.__w_pattern / (np.random.randint(100, 10000))
+        self.__w_pattern = np.round(self.__w_pattern, 3)
+
+    def __activate(self, x_sample):
+        """
+        Funkcja aktywacji dla pojedyńczego wzorca
+        z - całkowite pobudzenie neuronu
+        x_sample - pojedyńczy wzorzec wejściowy
+        """
+        z = 0
+        for i in range(len(x_sample)):
+            z += self.__w_pattern[i] * x_sample[i]
+        if z > self.__threshold:
+            return 1
+        elif self.__activation_function:
+            return 0
+        else:
+            return -1
+
+    def __showPerceptonDetails(self, epoch):
+        """
+        Wypisuje szczegoly uczenia
+        """
+        print("\nWłaściwości uczenia:")
+        print("liczba epok:" + str(epoch))
+        print("Wspolczynnik uczenia: " + str(self.__alpha))
+        if self.__bias:
+            print("Wykorzystano bias")
+        else:
+            print("Próg: " + str(self.__threshold))
+        if self.__activation_function:
+            print("Funkcja aktywacji - unipolarna")
+        else:
+            print("Funkcja aktywacji - bipolarna")
+        print("Zakres wag: [" + str(-self.__weight_range) + ", " + str(self.__weight_range) + "]")
+        print("Ostateczne wagi: " + str(self.__w_pattern))
