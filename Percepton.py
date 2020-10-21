@@ -6,6 +6,7 @@ class Percepton:
     logic = "AND" "OR"
     activation_function: True = unipolar / False = bipolar
     Threshold = 0 -> we use bias instead
+    alpha = learning rate
     """
 
     def __init__(self, weight_range=1, alpha=0.01, threshold=0, activation_function=True):
@@ -64,7 +65,6 @@ class Percepton:
         if self.__bias:
             self.__addBiasToPatterns()
         self.__generateTrainingWeights()
-
 
     def __prepareDefaultTrainPattern(self):
         """
