@@ -9,21 +9,16 @@ class Percepton:
     alpha = learning rate
     """
 
-    def __init__(self, weight_range=1, alpha=0.01, threshold=0, activation_function=True):
+    def train(self, weight_range=1, alpha=0.01, threshold=0.0, activation_function=True, bias=False):
         self.__weight_range = weight_range
         self.__alpha = alpha
         self.__threshold = threshold
-        if self.__threshold == 0:
-            self.__bias = True
-        else:
-            self.__bias = False
+        self.__bias = bias
         self.__activation_function = activation_function
-
         self.__x_pattern = None
         self.__y_pattern = None
         self.__w_pattern = None
-
-    def train(self):
+        self.__epoch = None
         """
         epoch - liczba zawierajaca epoki\n
         trained - jeśli jest ustawiony na true, wtedy oznacza to, ze znaleziono wagi, przy ktorych blad = 0\n
@@ -39,7 +34,7 @@ class Percepton:
         self.__prepareTrainingData()
         epoch = 0
         trained = False
-        while not trained:
+        while not trained and epoch < 10000:
             trained = True
             epoch += 1
             errors_in_epoch = []
@@ -55,7 +50,15 @@ class Percepton:
                 if e != 0:
                     trained = False
         self.__w_pattern = np.round(self.__w_pattern, 3)
-        self.__showPerceptonDetails(epoch)
+        self.__epoch = epoch
+
+    def task1(self, weight_range=1, alpha=0.01, threshold=0.5, activation_function=True, bias=False):
+        epoch_sum = 0
+        for i in range(1000):
+            self.train(weight_range=weight_range, alpha=alpha, threshold=threshold, activation_function=activation_function, bias=bias)
+            epoch_sum += self.__epoch
+        epoch_sum = epoch_sum/1000
+        print("epoch_sum: "+str(epoch_sum))
 
     def __prepareTrainingData(self):
         """
@@ -91,7 +94,7 @@ class Percepton:
         """
         input_pattern_len = len(self.__x_pattern[0])
         self.__w_pattern = np.random.randint(-(self.__weight_range * 100), self.__weight_range * 100, input_pattern_len)
-        self.__w_pattern = self.__w_pattern / (np.random.randint(100, 10000))
+        self.__w_pattern = self.__w_pattern / (np.random.randint(100, 1000))
         self.__w_pattern = np.round(self.__w_pattern, 3)
 
     def __activate(self, x_sample):
@@ -103,19 +106,24 @@ class Percepton:
         z = 0
         for i in range(len(x_sample)):
             z += self.__w_pattern[i] * x_sample[i]
-        if z > self.__threshold:
-            return 1
-        elif self.__activation_function:
-            return 0
-        else:
-            return -1
 
-    def __showPerceptonDetails(self, epoch):
+        if self.__activation_function:
+            if z > self.__threshold:
+                return 1
+            else:
+                return 0
+        else:
+            if z > self.__threshold:
+                return 1
+            else:
+                return -1
+
+    def __showPerceptonDetails(self):
         """
         Wypisuje szczegoly uczenia
         """
         print("\nWłaściwości uczenia:")
-        print("liczba epok:" + str(epoch))
+        print("liczba epok:" + str(self.__epoch))
         print("Wspolczynnik uczenia: " + str(self.__alpha))
         if self.__bias:
             print("Wykorzystano bias")

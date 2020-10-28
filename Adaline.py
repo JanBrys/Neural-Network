@@ -10,7 +10,7 @@ class Adaline:
     permissible_error - dopuszczalny blad
     """
 
-    def __init__(self, weight_range=1, delta=0.01, permissible_error=0.5, max_epochs=10000, activation_function=False):
+    def train(self, weight_range=1, delta=0.01, permissible_error=0.5, max_epochs=10000, activation_function=False):
         self.__weight_range = weight_range
         self.__max_epochs = max_epochs
         self.__delta = delta
@@ -21,16 +21,11 @@ class Adaline:
         self.__y_pattern = None
         self.__w_pattern = None
 
-    def train(self):
-        """
-
-        """
         self.__prepareTrainingData()
         epoch = -1
         epoch_error = 10
         permissible_error = self.__permissible_error
 
-        #dla unipolarnej
         while epoch_error >= permissible_error and epoch < self.__max_epochs:
             errors_in_epoch = []
             epoch += 1
@@ -44,6 +39,14 @@ class Adaline:
             epoch_error = sum(np.power(errors_in_epoch, 2))/len(errors_in_epoch)
         self.__w_pattern = np.round(self.__w_pattern, 3)
         self.__showAdalineDetails(epoch, epoch_error)
+        self.__epoch = epoch
+
+    def task1(self, weight_range=1, delta=0.01, permissible_error=0.5, max_epochs=10000, activation_function=False):
+        epoch_sum = 0
+        for i in range(1000):
+            self.train(weight_range=weight_range, delta=delta, permissible_error=permissible_error, max_epochs=max_epochs, activation_function=activation_function)
+            epoch_sum = self.__epoch
+        print("epoch_sum: "+str(epoch_sum))
 
     def __prepareTrainingData(self):
         """
@@ -78,8 +81,9 @@ class Adaline:
         """
         input_pattern_len = len(self.__x_pattern[0])
         self.__w_pattern = np.random.randint(-(self.__weight_range * 100), self.__weight_range * 100, input_pattern_len)
-        self.__w_pattern = self.__w_pattern / (np.random.randint(100, 10000))
+        self.__w_pattern = self.__w_pattern / (np.random.randint(100, 1000))
         self.__w_pattern = np.round(self.__w_pattern, 3)
+        print(self.__w_pattern)
 
     def __alc(self, x_sample):
         z = 0
